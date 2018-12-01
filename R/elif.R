@@ -1,7 +1,6 @@
 #' @importFrom utils head tail
 NULL
 
-
 fixfun <- function(dots) {
   if (length(dots) == 1) {
     return(dots[[1]])
@@ -17,14 +16,21 @@ is_assignment <- function(x) {
 
 is_valid <- function(dots) {
   check <- sapply(dots, is_assignment)
-  return(all(head(check, -1)) && !tail(check, 1))
+  if (all(head(check, -1)) && !tail(check, 1)) {
+    "HAS_DEFAULT"
+  } else if (all(check)) {
+    "NO_DEFAULT"
+  } else {
+    stop("invalid arguments passed to `elif`", call. = FALSE)
+  }
 }
 
 #' elif
 #' Generate vectorized if-else logic with pleasing syntax
-#' @param ... Expressions separated by commas mapping predicates to values. The
-#' \code{->} operator reminiscent to pattern matching in other languages. The last
-#' expression must be a default value or an error will be thrown.
+#' @param ... Expressions separated by commas mapping predicates to values using
+#' the #' \code{->} operator reminiscent of pattern matching in other languages.
+#' The last #' expression may ommit the right-assignment operator and be treated
+#' as a default value. 
 #' @param env Where the resultant expression should be evaluated. Defaults
 #' to the \code{parent.frame()}.
 #' @return the result of the evaulated \code{ifelse} expression evaulated in \code{env}.
@@ -34,14 +40,16 @@ is_valid <- function(dots) {
 #'  cyl == 4 -> "a",
 #'  cyl == 6 -> "b",
 #'  cyl == 8 -> "c", "d"))
-#' table(res, mtcars$cyl)
 #' }
 #' @export
 elif <- function(..., env=parent.frame()) {
   dots <- eval(substitute(alist(...)))
-
-  if (!is_valid(dots)) {
-    stop("invalid arguments passed to `elif`", call. = FALSE)
+  status <- is_valid(dots)
+  if (status == "NO_DEFAULT") {
+    dots <- c(dots, expression(NA))
   }
   eval(fixfun(dots), envir = env)
 }
+
+#'@export
+else_if <- elif
